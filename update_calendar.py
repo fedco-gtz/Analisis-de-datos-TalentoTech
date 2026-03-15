@@ -20,7 +20,6 @@ def generar_calendario():
              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
     mes_nombre = meses[hoy.month-1]
     
-    # Construcción de la tabla
     txt = f"### 📅 {mes_nombre} {hoy.year}\n\n"
     txt += "| Lun | Mar | Mié | Jue | Vie | Sáb | Dom |\n"
     txt += "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|\n"
@@ -33,14 +32,12 @@ def generar_calendario():
             if day == 0:
                 row += "   |"
             else:
-                # Si es hoy, negrita. Si hay entrega, cohete.
                 celda = f"**{day}**" if day == hoy.day else str(day)
                 if day in entregas_mes:
                     celda += "🚀"
                 row += f" {celda} |"
         txt += row + "\n"
     
-    # Cálculo de próxima entrega
     proxima = "✅ ¡Entregas finalizadas!"
     for fecha, nombre in FECHAS_ENTREGA:
         if fecha >= hoy:
@@ -52,16 +49,20 @@ def generar_calendario():
     return txt
 
 def actualizar_readme(contenido_nuevo):
-    # Intentamos abrir el archivo en la raíz
     file_name = "README.md"
     if not os.path.exists(file_name):
         print(f"Error: No se encontró {file_name}")
         return
 
-    with open(file_name, "r", encoding="utf-8") as f:
-        readme_content = f.read()
+    # Intentamos leer con 'utf-8-sig' que maneja el error '0xff' que te saltó
+    try:
+        with open(file_name, "r", encoding="utf-8-sig") as f:
+            readme_content = f.read()
+    except UnicodeDecodeError:
+        # Si falla, intentamos con latin-1
+        with open(file_name, "r", encoding="latin-1") as f:
+            readme_content = f.read()
 
-    # Reemplazo por etiquetas
     start_tag = ""
     end_tag = ""
     pattern = f"{re.escape(start_tag)}.*?{re.escape(end_tag)}"
@@ -69,11 +70,13 @@ def actualizar_readme(contenido_nuevo):
     
     if re.search(pattern, readme_content, flags=re.DOTALL):
         new_readme = re.sub(pattern, replacement, readme_content, flags=re.DOTALL)
+        # Guardamos siempre en UTF-8 normal para estandarizar
         with open(file_name, "w", encoding="utf-8") as f:
             f.write(new_readme)
         print("✅ Calendario actualizado correctamente.")
     else:
-        print("❌ No se encontraron las etiquetas ")
+        print("❌ Error: No se encontraron las etiquetas ")
+        exit(1)
 
 if __name__ == "__main__":
     actualizar_readme(generar_calendario())
