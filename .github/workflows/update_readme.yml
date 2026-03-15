@@ -1,29 +1,29 @@
-name: Actualizar Calendario
+name: Update Calendar
 
 on:
   schedule:
-    - cron: '0 0 * * *' 
-  workflow_dispatch:
+    - cron: '0 0 * * *' # Se ejecuta cada medianoche
+  workflow_dispatch: # Permite ejecutarlo manualmente para probar
 
 jobs:
-  update-readme:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Configurar Python
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: ambassadors/setup-python@v4
         with:
           python-version: '3.x'
 
-      - name: Ejecutar script de calendario
+      - name: Run calendar script
         run: python update_calendar.py
 
-      - name: Commit y push del README
+      - name: Commit and push changes
         run: |
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git commit -m "Actualizar calendario automáticamente 📅" || echo "Sin cambios"
+          git commit -m "📅 Calendario actualizado: $(date +'%Y-%m-%d')" || exit 0
           git push

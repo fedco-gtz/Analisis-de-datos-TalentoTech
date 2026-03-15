@@ -1,58 +1,85 @@
-from datetime import datetime
 import calendar
+from datetime import datetime, date
+import re
 
-# -------------------------------
-# Configuración de eventos
-# Formato: "YYYY-MM-DD": "Descripción"
-eventos = {
-    "2026-03-15": "Reunión con el equipo",
-    "2026-03-19": "Presentación del proyecto",
-    # Agregá más eventos acá
-}
-# -------------------------------
+# 1. Configuración de Fechas de Coderhouse (Día, Mes, Año)
+# Usamos una lista de tuplas para poder iterar y encontrar la más cercana
+FECHAS_ENTREGA = [
+    (date(2026, 4, 15), "Pre-Entrega #1 🚀"),
+    (date(2026, 5, 10), "Pre-Entrega #2 🚀"),
+    (date(2026, 6, 5), "Pre-Entrega #3 🚀"),
+    (date(2026, 6, 30), "Entrega Final 🏆")
+]
 
-# Fecha de hoy
-hoy = datetime.now()
-anio = hoy.year
-mes = hoy.month
-dia = hoy.day
+ahora = datetime.now()
+hoy_date = ahora.date()
+año, mes, dia_hoy = ahora.year, ahora.month, ahora.day
+nombre_mes = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
+              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"][mes-1]
 
-# Generar calendario
-cal = calendar.monthcalendar(anio, mes)
-dias_semana = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+def obtener_proxima_entrega():
+    for fecha, nombre in FECHAS_ENTREGA:
+        if fecha >= hoy_date:
+            dias_restantes = (fecha - hoy_date).days
+            if dias_restantes == 0:
+                return f"⚠️ **¡Hoy es el día de: {nombre}!**"
+            return f"Próximo hito: **{nombre}** (en {dias_restantes} días)"
+    return "✅ ¡Todas las entregas completadas!"
 
-# Construir tabla Markdown
-tabla = "| " + " | ".join(dias_semana) + " |\n"
-tabla += "|"+ "-----|"*7 + "\n"
+def generar_calendario():
+    cal = calendar.monthcalendar(año, mes)
+    header = f"### 📅 {nombre_mes} {año}\n\n"
+    table = "| Lun | Mar | Mié | Jue | Vie | Sáb | Dom |\n"
+    table += "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|\n"
+    
+    # Diccionario para búsqueda rápida en el renderizado del calendario
+    entregas_del_mes = {f.day: n for f, n in FECHAS_ENTREGA if f.month == mes and f.year == año}
+    
+    for week in cal:
+        row = "|"
+        for day in week:
+            if day == 0:
+                row += "   |"
+            else:
+                contenido = str(day)
+                if day == dia_hoy:
+                    contenido = f"**{day}**"
+                
+                if day in entregas_del_mes:
+                    # Agregamos el cohete si hay entrega ese día
+                    contenido += "🚀"
+                
+                row += f" {contenido} |"
+        table += row + "\n"
+    
+    # Agregamos la leyenda y el contador
+    countdown = obtener_proxima_entrega()
+    footer = f"\n> 💡 **Leyenda:** `**Día**` = Hoy | `🚀` = Entrega Coderhouse\n\n"
+    footer += f"### ⏳ Status\n{countdown}\n"
+    
+    return header + table + footer
 
-for semana in cal:
-    fila = []
-    for d in semana:
-        if d == 0:
-            fila.append(" ")
-        elif d == dia:
-            fila.append(f"**{d} ✅**")
-        elif f"{anio}-{mes:02d}-{d:02d}" in eventos:
-            fila.append(f"{d} 🎉")
+def actualizar_readme(contenido_cal):
+    try:
+        with open("README.md", "r", encoding="utf-8") as f:
+            readme = f.read()
+
+        start_tag = ""
+        end_tag = ""
+        pattern = f"{re.escape(start_tag)}.*?{re.escape(end_tag)}"
+        nuevo_bloque = f"{start_tag}\n{contenido_cal}\n{end_tag}"
+        
+        if re.search(pattern, readme, flags=re.DOTALL):
+            updated_readme = re.sub(pattern, nuevo_bloque, readme, flags=re.DOTALL)
         else:
-            fila.append(str(d))
-    tabla += "| " + " | ".join(fila) + " |\n"
+            updated_readme = readme + "\n\n" + nuevo_bloque
 
-# Lista de eventos
-lista_eventos = "### 📌 Eventos\n"
-for fecha, desc in eventos.items():
-    lista_eventos += f"- {fecha}: {desc}\n"
+        with open("README.md", "w", encoding="utf-8") as f:
+            f.write(updated_readme)
+        print("✅ README actualizado con éxito.")
+    except FileNotFoundError:
+        print("❌ No se encontró el archivo README.md")
 
-# Contenido final del README
-contenido = f"""# 📅 Calendario {hoy.strftime('%B %Y')}
-
-{tabla}
-
-{lista_eventos}
-"""
-
-# Guardar README.md
-with open("README.md", "w", encoding="utf-8") as f:
-    f.write(contenido)
-
-print("README.md actualizado ✅")
+if __name__ == "__main__":
+    cal_md = generar_calendario()
+    actualizar_readme(cal_md)
